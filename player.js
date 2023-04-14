@@ -10,6 +10,7 @@ function createAudioElement (src) {
   const audioElement = document.createElement('audio')
   audioElement.src = src
   audioElement.controls = true
+  audioElement.className = 'w-full mt-6'
   return audioElement
 }
 
@@ -36,6 +37,7 @@ function createPlaylistElement (songs) {
 
   return select
 }
+
 
 async function initPlayer (playlistId) {
   const playerElement = document.getElementById('player')

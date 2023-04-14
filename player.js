@@ -39,7 +39,6 @@ function createPlaylistElement (songs) {
 
 async function initPlayer (playlistId) {
   const playerElement = document.getElementById('player')
-  playerElement.innerHTML = '' // 清空播放器内容
   const playlist = await fetchPlaylist(apiUrl, playlistId)
 
   const audioElement = createAudioElement(playlist[0].url)
@@ -57,11 +56,11 @@ async function initPlayer (playlistId) {
   })
 }
 
-document.getElementById('loadPlaylist').addEventListener('click', () => {
-  const playlistId = document.getElementById('playlistId').value
-  if (playlistId) {
-    initPlayer(playlistId)
-  } else {
-    alert('请输入歌单ID')
-  }
-})
+const playerElement = document.getElementById('player')
+const playlistId = playerElement.dataset.playlistId
+
+if (playlistId) {
+  initPlayer(playlistId)
+} else {
+  alert('未设置歌单ID')
+}

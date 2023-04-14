@@ -4,20 +4,250 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>嵌入式网易云音乐播放器</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.17/dist/tailwind.min.css" />
+  <title>Music Player</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css"
+    integrity="sha384-KyZXEAg3QhqLMpG8r+Knujsl5/1ov5NFavJg3zp0lU3pUh63ijyn8/gp4xk5tn4/" crossorigin="anonymous">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Helvetica, sans-serif;
+      background-color: #F0F0F0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    #player {
+      background-color: #FFF;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 350px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    #songPicContainer {
+      display: flex;
+      justify-content: center;
+    }
+
+    #songPic {
+      width: 100%;
+      max-width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    #songInfo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    #title {
+      font-size: 1.1rem;
+      color: #333;
+      font-weight: bold;
+    }
+
+    #artist {
+      font-size: .85rem;
+      color: #666;
+    }
+
+    #controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .controlbtn {
+      font-size: 1.5rem;
+      color: #666;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .controlbtn:hover {
+      color: #333;
+    }
+  </style>
 </head>
 
-<body class="bg-gray-100">
-  <div class="min-h-screen flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow-md w-96">
-      <div class="text-xl font-semibold mb-6 text-center">网易云音乐播放器</div>
-      <div id="player" class="flex flex-col items-center" data-playlist-id="543246266">
-        <!-- Player elements will be added here -->
-      </div>
+<body>
+  <div id="player">
+    <div id="songPicContainer">
+      <img id="songPic" alt="Album Art">
+    </div>
+    <div id="songInfo">
+      <span id="title">Song Title</span>
+      <span id="artist">Artist Name</span>
+    </div>
+    <div id="controls">
+      <i id="playPrev" class="controlbtn fas fa-step-backward"></i>
+      <i id="playPause" class="controlbtn fas fa-play"></i>
+      <i id="playNext" class="controlbtn fas fa-step-forward"></i>
     </div>
   </div>
-  <script src="https://raw.githubusercontent.com/holygeek00/neteasePlayer/main/player.js"></script>
+  <script>
+    function get (url, callback) {
+      var xhr = new XMLHttpRequest()
+      xhr.onreadystatechange = function () {
+        if (this.readyState == 4 && this.status == 200) {
+          callback(this.responseText)
+        }
+      }
+      xhr.open("GET", url)
+      xhr.send()
+    }
+
+    function formatSeconds (seconds) {
+      var minutes = Math.floor(seconds / 60)
+      var secondsRemain = Math.floor(seconds % 60)
+      return String(minutes).padStart(2, "0") + ":" + String(secondsRemain).padStart(2, "0")
+    }
+
+    var detailsNode = document.getElementById("details")
+    var audioNode = document.getElementById("audio")
+    var songPicNode = document.getElementById("songPic")
+    var titleNode = document.getElementById("title")
+    var artistNode = document.getElementById("artist")
+    var aliasNode = document.getElementById("alias")
+    var timeNode = document.getElementById("time")
+    var lyricNode = document.getElementById("lyric")
+    var tlyricNode = document.getElementById("tlyric")
+    var nmLinkNode = document.getElementById("nmLink")
+    var playImgNode = document.getElementById("playImg")
+    var pauseImgNode = document.getElementById("pauseImg")
+
+    var lyrics
+    var tlyrics
+
+    function retrieveSong (id) {
+      get(
+        "https://nmapi.dontpanic.fun/song/url?id=" + id,
+        (data) => {
+          createPlayer(JSON.parse(data).data[0])
+        })
+    }
+
+    function retrieveDetails (id) {
+      get(
+        "https://nmapi.dontpanic.fun/song/detail?ids=" + id,
+        (data) => {
+          setDetails(JSON.parse(data).songs[0])
+        })
+    }
+
+    function retrieveLyric (id) {
+      get(
+        "https://nmapi.dontpanic.fun/lyric?id=" + id,
+        (data) => {
+          var lyricsText = JSON.parse(data)
+          lyrics = parseLyrics(lyricsText.lrc.lyric)
+          tlyrics = parseLyrics(lyricsText.tlyric.lyric)
+        })
+    }
+
+    function createPlayer (song) {
+      audioNode.src = song.url
+      audioNode.loop = "loop"
+
+      var body = document.getElementsByTagName("body")[0]
+      body.appendChild(audioNode)
+    }
+
+    function setDetails (details) {
+      titleNode.innerHTML = details.name
+      artistNode.innerHTML = " - " + details.ar[0].name
+      if (details.alia[0]) {
+        aliasNode.innerHTML = "(" + details.alia[0] + ")"
+      }
+
+      songPicNode.src = details.al.picUrl
+    }
+
+    function parseLyrics (lyricsText) {
+      var lyrics = []
+      var lines = lyricsText.split("\n")
+      for (var i = 0; i < lines.length; i++) {
+        var arr = /^\[([\d:.]*)]/g.exec(lines[i])
+        if (arr == null) {
+          continue
+        }
+
+        var text = lines[i].replace(arr[0], "")
+        var time = arr[1].split(":")
+        time.reverse()
+
+        var seconds = 0
+        var mutiplier = 1
+        for (var j = 0; j < 3; j++) {
+          if (time[j] != undefined) {
+            seconds += parseFloat(time[j]) * mutiplier
+            mutiplier *= 60
+          }
+        }
+
+        lyrics.push({ seconds, text })
+      }
+
+      lyrics.reverse()
+      return lyrics
+    }
+
+    function updateLyrics (currentTime, lyricsNode, lyrics) {
+      for (var i = 0; i < lyrics.length; i++) {
+        if (lyrics[i].seconds < currentTime) {
+          lyricsNode.innerHTML = lyrics[i].text
+          break
+        }
+      }
+    }
+
+    function playPause () {
+      if (audioNode.paused) {
+        audioNode.play()
+        playImgNode.style.display = "none"
+        pauseImgNode.style.display = "inline"
+      } else {
+        audioNode.pause()
+        playImgNode.style.display = "inline"
+        pauseImgNode.style.display = "none"
+      }
+    }
+
+    audioNode.addEventListener(
+      "timeupdate",
+      () => {
+        time.innerHTML = formatSeconds(audioNode.currentTime) + " / " + formatSeconds(audioNode.duration)
+        updateLyrics(audioNode.currentTime, lyricNode, lyrics)
+        updateLyrics(audioNode.currentTime, tlyricNode, tlyrics)
+      })
+
+    function initialize (id) {
+      retrieveSong(id)
+      retrieveDetails(id)
+      retrieveLyric(id)
+      nmLinkNode.href = "http://music.163.com/song?id=" + id
+    }
+
+    var id = window.location.search.substring(1)
+    if (id != undefined && id != "") {
+      initialize(id)
+    }
+  </script>
 </body>
 
 </html>
